@@ -32,8 +32,8 @@ _init_kv_pairs(int n,
                std::string key_string,
                std::string value_string) {
     for (int i=0; i<n; ++i) {
-        kv[i].alloc( key_string   + TestSuite::lzStr(3, i),
-                     value_string + TestSuite::lzStr(3, i) );
+        kv[i].alloc( key_string   + TestSuite::lzStr(9, i),
+                     value_string + TestSuite::lzStr(9, i) );
     }
     return 0;
 }

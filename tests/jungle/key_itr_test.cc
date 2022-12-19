@@ -881,12 +881,105 @@ int itr_key_flush_and_delete_half_even(bool recreate = false) {
     return 0;
 }
 
+int itr_key_perf() {
+    jungle::DB* db;
+    jungle::Status s;
+
+    std::string filename;
+    TEST_SUITE_PREPARE_PATH(filename)
+
+    // Open DB.
+    jungle::DBConfig config;
+    TEST_CUSTOM_DB_CONFIG(config)
+    config.maxEntriesInLogFile = 10;
+    s = jungle::DB::open(&db, filename, config);
+    CHK_Z(s);
+
+    // Set KV pairs.
+    int n = 10000000;
+    std::vector<jungle::KV> kv(n);
+    CHK_Z(_init_kv_pairs(n, kv, "k", "v"));
+//    CHK_Z(_set_byseq_kv_pairs(0, n, 0, db, kv));
+    CHK_Z(_set_bykey_kv_pairs(0, n, db, kv));
+
+/*
+    // Update even number KV pairs.
+    int seq_count = n;
+    std::vector<jungle::KV> kv2(n);
+    CHK_Z(_init_kv_pairs(n, kv2, "k", "v2"));
+    for (int ii=0; ii<n; ii+=2) {
+        CHK_Z(db->setSN(seq_count, kv2[ii]));
+        seq_count++;
+    }
+*/
+    // Iterator.
+    jungle::Iterator itr;
+    s = itr.init(db);
+    CHK_Z(s);
+
+    // Check returned records.
+    int count = 0;
+    do {
+        jungle::Record rec_out;
+        s = itr.get(rec_out);
+        if (!s) break;
+
+/*
+        if (count % 2 == 0) {
+            CHK_EQ(kv2[count].key, rec_out.kv.key);
+            CHK_EQ(kv2[count].value, rec_out.kv.value);
+        } else {
+*/
+            CHK_EQ(kv[count].key, rec_out.kv.key);
+            CHK_EQ(kv[count].value, rec_out.kv.value);
+//        }
+
+        rec_out.free();
+        count++;
+    } while (itr.next());
+    CHK_EQ(n, count);
+/*
+    // Backward
+    do {
+        jungle::Record rec_out;
+        s = itr.get(rec_out);
+        if (!s) break;
+
+        count--;
+        if (count % 2 == 0) {
+            CHK_EQ(kv2[count].key, rec_out.kv.key);
+            CHK_EQ(kv2[count].value, rec_out.kv.value);
+        } else {
+            CHK_EQ(kv[count].key, rec_out.kv.key);
+            CHK_EQ(kv[count].value, rec_out.kv.value);
+        }
+
+        rec_out.free();
+    } while (itr.prev());
+    CHK_EQ(0, count);
+*/
+    // Close iterator.
+    itr.close();
+
+    // Close DB.
+    s = jungle::DB::close(db);
+    CHK_Z(s);
+
+    // Free all resources for jungle.
+    jungle::shutdown();
+    _free_kv_pairs(n, kv);
+ //   _free_kv_pairs(n, kv2);
+
+    TEST_SUITE_CLEANUP_PATH();
+    return 0;
+}
+
 int main(int argc, char** argv) {
     TestSuite ts(argc, argv);
 
     //ts.options.printTestMessage = true;
     //ts.options.abortOnFailure = true;
-    ts.doTest("key empty itr", itr_key_empty);
+/*    ts.doTest("key empty itr", itr_key_empty);
     ts.doTest("key itr test", itr_key_basic);
     ts.doTest("key itr purge test", itr_key_purge);
     ts.doTest("key itr isolation test", itr_key_isolation);
@@ -900,6 +993,7 @@ int main(int argc, char** argv) {
     ts.doTest("key itr flush and delete half even test",
               itr_key_flush_and_delete_half_even,
               TestRange<bool>({false, true}));
-
+*/
+    ts.doTest("key itr perf test", itr_key_perf);
     return 0;
 }
